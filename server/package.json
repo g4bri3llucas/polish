@@ -1,0 +1,28 @@
+{
+  "name": "revisor-curriculo-server",
+  "version": "0.1.0",
+  "private": true,
+  "description": "API Express do Revisor de Currículo e LinkedIn com IA",
+  "main": "dist/server.js",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "dev": "tsx watch src/server.ts",
+    "build": "tsc",
+    "start": "node dist/server.js",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "cors": "^2.8.6",
+    "dotenv": "^18.0.5",
+    "express": "^5.2.1"
+  },
+  "devDependencies": {
+    "@types/cors": "^2.8.19",
+    "@types/express": "^5.0.6",
+    "@types/node": "^26.6.4",
+    "tsx": "^4.23.15",
+    "typescript": "^7.0.2"
+  }
+}
