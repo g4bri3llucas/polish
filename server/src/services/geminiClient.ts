@@ -1,4 +1,8 @@
-import { ApiError, GoogleGenAI } from '@google/genai';
+import {
+  ApiError,
+  GoogleGenAI,
+  type GenerateContentConfig,
+} from '@google/genai';
 import { AppError } from '../errors/AppError';
 import type { LlmClient, LlmGenerateParams } from './llmClient';
 
@@ -48,6 +52,14 @@ function toAppError(error: unknown): AppError {
   );
 }
 
+function emptyResponseError(): AppError {
+  return new AppError(
+    502,
+    'LLM_EMPTY_RESPONSE',
+    'O serviço de IA não retornou nenhum conteúdo.',
+  );
+}
+
 export class GeminiClient implements LlmClient {
   private readonly ai: GoogleGenAI;
   private readonly model: string;
@@ -57,29 +69,64 @@ export class GeminiClient implements LlmClient {
     this.model = model;
   }
 
+  private buildConfig(params: LlmGenerateParams): GenerateContentConfig {
+    // A chamada é cancelada por tempo esgotado OU quando quem chamou desiste
+    // (por exemplo, o navegador fechou a conexão).
+    const signals = [AbortSignal.timeout(REQUEST_TIMEOUT_MS)];
+
+    if (params.signal !== undefined) {
+      signals.push(params.signal);
+    }
+
+    return {
+      systemInstruction: params.systemInstruction,
+      temperature: TEMPERATURE,
+      abortSignal: AbortSignal.any(signals),
+    };
+  }
+
   async generate(params: LlmGenerateParams): Promise<string> {
     try {
       const response = await this.ai.models.generateContent({
         model: this.model,
         contents: params.prompt,
-        config: {
-          systemInstruction: params.systemInstruction,
-          temperature: TEMPERATURE,
-          abortSignal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
-        },
+        config: this.buildConfig(params),
       });
 
       const text = response.text?.trim();
 
       if (text === undefined || text === '') {
-        throw new AppError(
-          502,
-          'LLM_EMPTY_RESPONSE',
-          'O serviço de IA não retornou nenhum conteúdo.',
-        );
+        throw emptyResponseError();
       }
 
       return text;
+    } catch (error) {
+      throw toAppError(error);
+    }
+  }
+
+  async *generateStream(params: LlmGenerateParams): AsyncGenerator<string> {
+    try {
+      const stream = await this.ai.models.generateContentStream({
+        model: this.model,
+        contents: params.prompt,
+        config: this.buildConfig(params),
+      });
+
+      let hasContent = false;
+
+      for await (const chunk of stream) {
+        const text = chunk.text;
+
+        if (text !== undefined && text !== '') {
+          hasContent = true;
+          yield text;
+        }
+      }
+
+      if (!hasContent) {
+        throw emptyResponseError();
+      }
     } catch (error) {
       throw toAppError(error);
     }
