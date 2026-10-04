@@ -33,9 +33,9 @@ A chave do LLM fica somente no back-end, em variável de ambiente.
 ## Roadmap
 
 - [x] 1. Estrutura do repo, README inicial, `.gitignore`
-- [ ] 2. Servidor Express + TS com health check
-- [ ] 3. Integração com o LLM e endpoint de revisão
-- [ ] 4. Validação, limites e erros
+- [x] 2. Servidor Express + TS com health check
+- [x] 3. Integração com o LLM e endpoint de revisão
+- [x] 4. Validação, limites e erros
 - [ ] 5. Streaming (SSE)
 - [ ] 6. Angular: layout e formulário
 - [ ] 7. Angular: serviço HTTP, consumo do streaming, loading/erro
