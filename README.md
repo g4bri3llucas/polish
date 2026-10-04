@@ -36,7 +36,7 @@ A chave do LLM fica somente no back-end, em variável de ambiente.
 - [x] 2. Servidor Express + TS com health check
 - [x] 3. Integração com o LLM e endpoint de revisão
 - [x] 4. Validação, limites e erros
-- [ ] 5. Streaming (SSE)
+- [x] 5. Streaming (SSE)
 - [ ] 6. Angular: layout e formulário
 - [ ] 7. Angular: serviço HTTP, consumo do streaming, loading/erro
 - [ ] 8. Testes (back e front)
