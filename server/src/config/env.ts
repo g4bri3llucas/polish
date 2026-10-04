@@ -19,7 +19,22 @@ function readPort(value: string | undefined): number {
   return port;
 }
 
+function requireEnv(name: string): string {
+  const value = process.env[name]?.trim();
+
+  if (value === undefined || value === '') {
+    throw new Error(
+      `Variável de ambiente ${name} não definida. ` +
+        'Copie server/.env.example para server/.env e preencha os valores.',
+    );
+  }
+
+  return value;
+}
+
 export const env = {
   port: readPort(process.env['PORT']),
   clientOrigin: process.env['CLIENT_ORIGIN'] ?? DEFAULT_CLIENT_ORIGIN,
+  llmApiKey: requireEnv('LLM_API_KEY'),
+  llmModel: requireEnv('LLM_MODEL'),
 } as const;

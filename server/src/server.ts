@@ -1,10 +1,12 @@
 import { createApp } from './app';
 import { env } from './config/env';
+import { GeminiClient } from './services/geminiClient';
 
-const app = createApp();
+const llmClient = new GeminiClient(env.llmApiKey, env.llmModel);
+const app = createApp({ llmClient });
 
 const server = app.listen(env.port, () => {
-    console.log(`Servidor rodando em http://localhost:${env.port}`);
+  console.log(`Servidor rodando em http://localhost:${env.port}`);
 });
 
 function shutdown(signal: string): void {
