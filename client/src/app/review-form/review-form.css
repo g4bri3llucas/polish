@@ -1,0 +1,127 @@
+:host {
+  display: block;
+}
+
+.sheet {
+  display: grid;
+  gap: 1.5rem;
+  padding: 1.25rem;
+  background: var(--sheet);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+}
+
+.field {
+  display: grid;
+  gap: 0.375rem;
+}
+
+.label {
+  font-weight: 650;
+}
+
+.hint {
+  margin: 0;
+  color: var(--ink-muted);
+  font-size: 0.9375rem;
+}
+
+/* linha vermelha para folha corrigida. */
+.paper {
+  width: 100%;
+  min-height: 6rem;
+  padding: 0.75rem 0.875rem 0.75rem 2.75rem;
+  resize: vertical;
+  color: var(--ink);
+  font-family: var(--font-text);
+  font-size: 1.0625rem;
+  line-height: 1.6;
+  background-color: transparent;
+  background-image: linear-gradient(
+    to right,
+    transparent 2rem,
+    color-mix(in srgb, var(--pen) 55%, transparent) 2rem,
+    color-mix(in srgb, var(--pen) 55%, transparent) calc(2rem + 1px),
+    transparent calc(2rem + 1px)
+  );
+  background-attachment: local;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+}
+
+.paper::placeholder {
+  color: var(--ink-muted);
+}
+
+.paper[aria-invalid='true'] {
+  border-color: var(--pen);
+}
+
+.meta {
+  display: flex;
+  gap: 1rem;
+  justify-content: space-between;
+  font-size: 0.9375rem;
+}
+
+.error {
+  margin: 0;
+  color: var(--pen);
+  font-weight: 550;
+}
+
+.count {
+  margin: 0 0 0 auto;
+  color: var(--ink-muted);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.count.over {
+  color: var(--pen);
+  font-weight: 550;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  align-items: center;
+}
+
+.primary {
+  padding: 0.75rem 1.25rem;
+  color: var(--button-ink);
+  font: inherit;
+  font-weight: 650;
+  background: var(--button-bg);
+  border: 0;
+  border-radius: var(--radius);
+  cursor: pointer;
+  transition: background-color 0.15s;
+}
+
+.primary:hover {
+  background: var(--button-bg-hover);
+}
+
+.primary[aria-disabled='true'] {
+  background: var(--button-bg);
+  opacity: 0.6;
+  cursor: progress;
+}
+
+.ghost {
+  padding: 0.75rem 0.5rem;
+  color: var(--ink-muted);
+  font: inherit;
+  background: transparent;
+  border: 0;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+
+.ghost:hover {
+  color: var(--ink);
+}

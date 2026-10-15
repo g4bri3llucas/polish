@@ -1,0 +1,46 @@
+<section class="panel" aria-labelledby="panel-title">
+  <div class="grade" aria-hidden="true">
+    <svg viewBox="0 0 152 104" preserveAspectRatio="none" focusable="false">
+      <path
+        d="M 24 60 C 12 30, 52 8, 92 10 C 130 12, 146 40, 126 70 C 108 96, 56 100, 30 82 C 14 71, 14 46, 34 30"
+      />
+    </svg>
+    <span class="grade-text">
+      <span class="grade-value">?</span>
+      <span class="grade-max">/100</span>
+    </span>
+  </div>
+
+  @if (request(); as current) {
+    <h2 id="panel-title">Pedido recebido</h2>
+    <p>
+      Recebi {{ current.resumeText.length.toLocaleString('pt-BR') }} caracteres de currículo{{
+        current.jobDescription ? ' e a descrição da vaga' : ''
+      }}. A revisão pela IA chega na próxima etapa.
+    </p>
+  } @else {
+    <h2 id="panel-title">Sua revisão aparece aqui</h2>
+    <p>
+      Cole seu texto e clique em Revisar currículo. A resposta chega enquanto é escrita, dividida em
+      quatro partes.
+    </p>
+    <dl class="sections">
+      <div>
+        <dt>Nota</dt>
+        <dd>Um número de 0 a 100, com uma frase explicando.</dd>
+      </div>
+      <div>
+        <dt>Pontos fortes</dt>
+        <dd>O que já funciona e deve ficar como está.</dd>
+      </div>
+      <div>
+        <dt>Problemas</dt>
+        <dd>O que atrapalha quem lê o currículo.</dd>
+      </div>
+      <div>
+        <dt>Sugestões</dt>
+        <dd>Mudanças concretas, com trechos reescritos.</dd>
+      </div>
+    </dl>
+  }
+</section>

@@ -1,1 +1,67 @@
-/* You can add global styles to this file, and also import other style files */
+@import '@fontsource-variable/bricolage-grotesque';
+@import '@fontsource-variable/source-serif-4';
+
+:root {
+  color-scheme: light dark;
+
+  /* Papel e tinta: a página é uma mesa, o currículo é a folha. */
+  --desk: #e9eef5;
+  --sheet: #fdfeff;
+  --ink: #14213d;
+  --ink-muted: #506079;
+  --rule: #c7d1e0;
+  --pen: #c4202e;
+  --button-bg: #14213d;
+  --button-bg-hover: #25396b;
+  --button-ink: #ffffff;
+
+  --radius: 3px;
+  --font-ui: 'Bricolage Grotesque Variable', 'Segoe UI', system-ui, sans-serif;
+  --font-text: 'Source Serif 4 Variable', Georgia, 'Times New Roman', serif;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --desk: #0d1420;
+    --sheet: #162033;
+    --ink: #e8edf7;
+    --ink-muted: #9aa8c2;
+    --rule: #2c3a55;
+    --pen: #ff7b86;
+    --button-bg: #e8edf7;
+    --button-bg-hover: #ffffff;
+    --button-ink: #0d1420;
+  }
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--desk);
+  color: var(--ink);
+  font-family: var(--font-ui);
+  font-size: 1rem;
+  line-height: 1.5;
+}
+
+:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 3px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition: none !important;
+  }
+}

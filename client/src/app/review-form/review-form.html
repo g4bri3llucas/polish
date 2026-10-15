@@ -1,0 +1,51 @@
+<form class="sheet" [formGroup]="form" (ngSubmit)="onSubmit()" novalidate>
+  <div class="field">
+    <label class="label" for="resumeText">Currículo ou perfil do LinkedIn</label>
+    <textarea
+      id="resumeText"
+      class="paper"
+      formControlName="resumeText"
+      rows="10"
+      placeholder="Cole aqui o texto completo, com experiências, formação e habilidades."
+      [attr.aria-invalid]="errorMessage('resumeText') ? 'true' : null"
+      aria-describedby="resumeText-error resumeText-count"
+    ></textarea>
+    <div class="meta">
+      @if (errorMessage('resumeText'); as message) {
+        <p class="error" id="resumeText-error" role="alert">{{ message }}</p>
+      }
+      <p class="count" id="resumeText-count" [class.over]="isOverLimit('resumeText')">
+        {{ format(lengthOf('resumeText')) }} / {{ format(limits.resumeMaxChars) }}
+      </p>
+    </div>
+  </div>
+
+  <div class="field">
+    <label class="label" for="jobDescription">Descrição da vaga (opcional)</label>
+    <p class="hint" id="jobDescription-hint">
+      Com a vaga, a revisão também avalia o quanto o currículo combina com ela.
+    </p>
+    <textarea
+      id="jobDescription"
+      class="paper"
+      formControlName="jobDescription"
+      rows="4"
+      placeholder="Cole aqui o anúncio da vaga."
+      [attr.aria-invalid]="errorMessage('jobDescription') ? 'true' : null"
+      aria-describedby="jobDescription-hint jobDescription-error jobDescription-count"
+    ></textarea>
+    <div class="meta">
+      @if (errorMessage('jobDescription'); as message) {
+        <p class="error" id="jobDescription-error" role="alert">{{ message }}</p>
+      }
+      <p class="count" id="jobDescription-count" [class.over]="isOverLimit('jobDescription')">
+        {{ format(lengthOf('jobDescription')) }} / {{ format(limits.jobDescriptionMaxChars) }}
+      </p>
+    </div>
+  </div>
+
+  <div class="actions">
+    <button class="primary" type="submit">Revisar currículo</button>
+    <button class="ghost" type="button" (click)="onClear()">Limpar</button>
+  </div>
+</form>
