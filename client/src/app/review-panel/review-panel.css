@@ -1,0 +1,91 @@
+:host {
+  display: block;
+}
+
+.panel {
+  max-width: 34rem;
+  padding: 0.5rem 0;
+}
+
+/* A nota é a única marca de caneta vermelha da tela. */
+.grade {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 9.5rem;
+  height: 6.5rem;
+  margin-bottom: 1.25rem;
+  color: var(--pen);
+  transform: rotate(-4deg);
+}
+
+.grade svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.grade path {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 3.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  vector-effect: non-scaling-stroke;
+}
+
+.grade-text {
+  position: relative;
+  display: flex;
+  gap: 0.125rem;
+  align-items: baseline;
+}
+
+.grade-value {
+  font-size: 2.5rem;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.grade-max {
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+h2 {
+  margin: 0 0 0.5rem;
+  font-size: 1.5rem;
+  font-weight: 700;
+  line-height: 1.2;
+  letter-spacing: -0.02em;
+}
+
+p {
+  margin: 0 0 1.5rem;
+  font-family: var(--font-text);
+  font-size: 1.0625rem;
+  line-height: 1.65;
+}
+
+.sections {
+  display: grid;
+  gap: 0.75rem;
+  margin: 0;
+}
+
+.sections > div {
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--rule);
+}
+
+dt {
+  font-weight: 650;
+}
+
+dd {
+  margin: 0.125rem 0 0;
+  color: var(--ink-muted);
+  font-family: var(--font-text);
+  line-height: 1.6;
+}
