@@ -45,7 +45,13 @@
   </div>
 
   <div class="actions">
-    <button class="primary" type="submit">Revisar currículo</button>
-    <button class="ghost" type="button" (click)="onClear()">Limpar</button>
+    <button class="primary" type="submit" [attr.aria-disabled]="busy()">
+      {{ busy() ? 'Revisando…' : 'Revisar currículo' }}
+    </button>
+    @if (busy()) {
+      <button class="ghost" type="button" (click)="onCancel()">Cancelar</button>
+    } @else {
+      <button class="ghost" type="button" (click)="onClear()">Limpar</button>
+    }
   </div>
 </form>
