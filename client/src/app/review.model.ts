@@ -3,7 +3,9 @@ export interface ReviewRequest {
   jobDescription?: string;
 }
 
-// Espelham server/src/config/limits.ts. Se mudar lá, tenho que mudar aqui também.
+export type ReviewStreamEvent = { type: 'chunk'; text: string } | { type: 'done' };
+
+// Espelham server/src/config/limits.ts. Se mudar lá, mude aqui também.
 // Quem decide de verdade é o servidor; estes valores só avisam antes de enviar.
 export const REVIEW_LIMITS = {
   resumeMinChars: 50,

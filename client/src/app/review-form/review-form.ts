@@ -1,4 +1,11 @@
-import { ChangeDetectionStrategy, Component, ElementRef, inject, output } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  ElementRef,
+  inject,
+  input,
+  output,
+} from '@angular/core';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { REVIEW_LIMITS, type ReviewRequest } from '../review.model';
 import { minTrimmedLength, requiredTrimmed } from '../validators';
@@ -27,8 +34,10 @@ const FIELD_ORDER: readonly FieldName[] = ['resumeText', 'jobDescription'];
 export class ReviewForm {
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
 
+  readonly busy = input(false);
   readonly submitted = output<ReviewRequest>();
   readonly cleared = output<void>();
+  readonly cancelled = output<void>();
 
   protected readonly limits = REVIEW_LIMITS;
 
@@ -84,6 +93,10 @@ export class ReviewForm {
   }
 
   protected onSubmit(): void {
+    if (this.busy()) {
+      return;
+    }
+
     this.form.markAllAsTouched();
 
     if (this.form.invalid) {
@@ -104,6 +117,10 @@ export class ReviewForm {
   protected onClear(): void {
     this.form.reset();
     this.cleared.emit();
+  }
+
+  protected onCancel(): void {
+    this.cancelled.emit();
   }
 
   private focusFirstInvalid(): void {

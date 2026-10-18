@@ -4,6 +4,11 @@
 </header>
 
 <main class="workspace">
-  <app-review-form (submitted)="onSubmitted($event)" (cleared)="onCleared()" />
-  <app-review-panel [request]="request()" />
+  <app-review-form
+    [busy]="store.busy()"
+    (submitted)="onSubmitted($event)"
+    (cleared)="onReset()"
+    (cancelled)="onReset()"
+  />
+  <app-review-panel />
 </main>
