@@ -46,3 +46,14 @@ A chave do LLM fica somente no back-end, em variável de ambiente.
 ## Como rodar
 
 As instruções de execução serão adicionadas conforme o servidor (etapa 2) e o cliente (etapa 6) forem criados.
+
+## Tests
+
+Server tests use [Vitest](https://vitest.dev). They never call the real Gemini API: an in-memory
+`LlmClient` is injected into the Express app, so they are fast, free and deterministic.
+
+```bash
+cd server
+npm test           # run once
+npm run test:watch # re-run on file changes
+```
