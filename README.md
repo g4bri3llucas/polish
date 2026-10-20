@@ -38,8 +38,8 @@ A chave do LLM fica somente no back-end, em variável de ambiente.
 - [x] 4. Validação, limites e erros
 - [x] 5. Streaming (SSE)
 - [x] 6. Angular: layout e formulário
-- [ ] 7. Angular: serviço HTTP, consumo do streaming, loading/erro
-- [ ] 8. Testes (back e front)
+- [x] 7. Angular: serviço HTTP, consumo do streaming, loading/erro
+- [x] 8. Testes (back e front)
 - [ ] 9. CI com GitHub Actions
 - [ ] 10. Deploy e README final
 
@@ -56,4 +56,21 @@ Server tests use [Vitest](https://vitest.dev). They never call the real Gemini A
 cd server
 npm test           # run once
 npm run test:watch # re-run on file changes
+```
+## Tests
+
+Both sides use [Vitest](https://vitest.dev). Neither suite ever calls the real Gemini API:
+the server tests inject an in-memory `LlmClient`, and the client tests replace `ReviewApi`
+(or `fetch`) with fakes, so they are fast, free and deterministic.
+
+```bash
+# server
+cd server
+npm test           # run once
+npm run test:watch # re-run on file changes
+
+# client
+cd client
+npm test -- --watch=false # run once (Angular's test runner, Vitest + jsdom)
+npm test                  # watch mode
 ```
