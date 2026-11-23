@@ -5,6 +5,7 @@
     "module": "NodeNext",
     "moduleResolution": "NodeNext",
     "types": ["node"],
+    "typeRoots": ["./node_modules/@types"],
     "rootDir": "src",
     "outDir": "dist",
     "strict": true,
