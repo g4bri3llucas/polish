@@ -40,7 +40,14 @@
       </dl>
     }
     @case ('loading') {
-      <p>Enviamos o texto para a IA. A resposta começa a aparecer em instantes.</p>
+      @if (store.restarted()) {
+        <p>
+          O serviço de IA oscilou no meio da resposta, então descartamos o que tinha chegado e
+          pedimos uma revisão nova. Ela começa a aparecer em instantes.
+        </p>
+      } @else {
+        <p>Enviamos o texto para a IA. A resposta começa a aparecer em instantes.</p>
+      }
     }
     @default {
       <div class="review-text" [class.writing]="store.status() === 'streaming'">

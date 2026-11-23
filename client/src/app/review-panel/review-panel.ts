@@ -15,7 +15,7 @@ export class ReviewPanel {
   protected readonly title = computed(() => {
     switch (this.store.status()) {
       case 'loading':
-        return 'Lendo seu currículo';
+        return this.store.restarted() ? 'Recomeçando a revisão' : 'Lendo seu currículo';
       case 'streaming':
         return 'Escrevendo sua revisão';
       case 'done':
@@ -29,12 +29,13 @@ export class ReviewPanel {
     }
   });
 
-  // Anunciar cada pedaço de texto seria barulhento para quem usa leitor de
-  // tela, então avisamos apenas quando algo importante muda.
+
   protected readonly announcement = computed(() => {
     switch (this.store.status()) {
       case 'loading':
-        return 'Enviando seu currículo.';
+        return this.store.restarted()
+          ? 'O serviço de IA oscilou. A revisão está recomeçando.'
+          : 'Enviando seu currículo.';
       case 'done':
         return 'A revisão ficou pronta.';
       default:

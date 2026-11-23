@@ -48,6 +48,17 @@ describe('ReviewPanel', () => {
     expect(text('[role="status"]')).toBe('Enviando seu currículo.');
   });
 
+  it('explains when the review starts over', async () => {
+    store.submit(request);
+    api.latest.next({ type: 'chunk', text: '## Nota\n**35/100**' });
+    api.latest.next({ type: 'restart' });
+    await settle();
+
+    expect(text('h2')).toBe('Recomeçando a revisão');
+    expect(text('.grade-value')).toBe('…');
+    expect(text('[role="status"]')).toBe('O serviço de IA oscilou. A revisão está recomeçando.');
+  });
+
   it('renders the review as it streams, with the score, headings, lists and bold text', async () => {
     store.submit(request);
     api.latest.next({

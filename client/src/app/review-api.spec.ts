@@ -70,6 +70,26 @@ describe('ReviewApi', () => {
     expect(result.events[0]).toEqual({ type: 'chunk', text: 'Avaliação ✓' });
   });
 
+  it('emits a restart event when the server starts the review over', async () => {
+    fetchMock.mockResolvedValue(
+      streamResponse([
+        sseChunk('parcial'),
+        'event: restart\ndata: {}\n\n',
+        sseChunk('novo'),
+        SSE_DONE,
+      ]),
+    );
+
+    const result = await collect(api.streamReview(REQUEST));
+
+    expect(result.events).toEqual([
+      { type: 'chunk', text: 'parcial' },
+      { type: 'restart' },
+      { type: 'chunk', text: 'novo' },
+      { type: 'done' },
+    ]);
+  });
+
   it('ignores events it does not know', async () => {
     fetchMock.mockResolvedValue(
       streamResponse(['event: ping\ndata: {}\n\n', sseChunk('oi'), SSE_DONE]),

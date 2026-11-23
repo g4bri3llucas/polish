@@ -26,7 +26,7 @@ function parseJson(text: string): unknown {
   }
 }
 
-// Lê o formato de erro da nossa API: { error: { code, message } }.
+
 function readApiError(body: unknown): ReviewApiError | null {
   if (!isRecord(body)) {
     return null;
@@ -68,6 +68,10 @@ function toStreamEvent(message: SseMessage): ReviewStreamEvent | null {
     throw new ReviewApiError('INVALID_STREAM', 'O servidor enviou um trecho inválido.');
   }
 
+  if (message.event === 'restart') {
+    return { type: 'restart' };
+  }
+
   if (message.event === 'done') {
     return { type: 'done' };
   }
@@ -79,7 +83,7 @@ function toStreamEvent(message: SseMessage): ReviewStreamEvent | null {
     );
   }
 
-  // Eventos que não conhecemos são ignorados.
+  
   return null;
 }
 
@@ -88,7 +92,7 @@ function toApiError(error: unknown): ReviewApiError {
     return error;
   }
 
-  // Quando o fetch não consegue nem chegar ao servidor, ele lança um TypeError.
+  
   if (error instanceof TypeError) {
     return new ReviewApiError(
       'NETWORK_ERROR',

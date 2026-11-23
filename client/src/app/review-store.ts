@@ -16,10 +16,12 @@ export class ReviewStore {
   private readonly statusState = signal<ReviewStatus>('idle');
   private readonly textState = signal('');
   private readonly errorState = signal<ReviewApiError | null>(null);
+  private readonly restartedState = signal(false);
 
   readonly status = this.statusState.asReadonly();
   readonly text = this.textState.asReadonly();
   readonly error = this.errorState.asReadonly();
+  readonly restarted = this.restartedState.asReadonly();
 
   readonly busy = computed(
     () => this.statusState() === 'loading' || this.statusState() === 'streaming',
@@ -31,6 +33,7 @@ export class ReviewStore {
     this.lastRequest = request;
     this.textState.set('');
     this.errorState.set(null);
+    this.restartedState.set(false);
     this.statusState.set('loading');
 
     this.subscription = this.api.streamReview(request).subscribe({
@@ -38,6 +41,12 @@ export class ReviewStore {
         if (event.type === 'chunk') {
           this.textState.update((text) => text + event.text);
           this.statusState.set('streaming');
+        }
+
+        if (event.type === 'restart') {
+          this.textState.set('');
+          this.restartedState.set(true);
+          this.statusState.set('loading');
         }
       },
       error: (error: unknown) => {
@@ -60,12 +69,12 @@ export class ReviewStore {
     }
   }
 
-  // Interrompe qualquer revisão em andamento e volta ao estado inicial.
   reset(): void {
     this.stop();
     this.lastRequest = null;
     this.textState.set('');
     this.errorState.set(null);
+    this.restartedState.set(false);
     this.statusState.set('idle');
   }
 

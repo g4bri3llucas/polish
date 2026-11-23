@@ -96,6 +96,28 @@ describe('ReviewStore', () => {
     expect(store.busy()).toBe(false);
   });
 
+  it('drops the partial text and goes back to loading on restart', () => {
+    store.submit(REQUEST);
+    current().next({ type: 'chunk', text: 'parcial' });
+    current().next({ type: 'restart' });
+
+    expect(store.text()).toBe('');
+    expect(store.status()).toBe('loading');
+    expect(store.restarted()).toBe(true);
+
+    current().next({ type: 'chunk', text: 'novo' });
+    expect(store.text()).toBe('novo');
+    expect(store.status()).toBe('streaming');
+  });
+
+  it('forgets the restart on a new submit', () => {
+    store.submit(REQUEST);
+    current().next({ type: 'restart' });
+    store.submit(REQUEST);
+
+    expect(store.restarted()).toBe(false);
+  });
+
   it('wraps unexpected errors in a ReviewApiError', () => {
     store.submit(REQUEST);
     current().error(new Error('boom'));
