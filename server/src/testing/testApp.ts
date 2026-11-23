@@ -44,7 +44,6 @@ export interface FakeLlmBehavior {
   generateStream?: (params: LlmGenerateParams) => AsyncIterable<string>;
 }
 
-// Um LlmClient falso que anota como foi chamado.
 export function createFakeLlm(behavior: FakeLlmBehavior = {}): FakeLlm {
   const generateCalls: LlmGenerateParams[] = [];
   const streamCalls: LlmGenerateParams[] = [];

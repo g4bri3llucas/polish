@@ -19,8 +19,6 @@ export function createApp({ llmClient }: AppDependencies): Express {
   app.set('trust proxy', env.trustProxy);
   app.use(cors({ origin: env.clientOrigin }));
 
-  // O limite de requisições vem antes do parser de JSON, para barrar o abuso
-  // antes de gastar processamento lendo o corpo.
   app.use('/api/review', createReviewRateLimiter());
   app.use(express.json({ limit: LIMITS.jsonBodyLimit }));
 

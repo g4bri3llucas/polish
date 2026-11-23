@@ -11,8 +11,6 @@ function hasStringType(err: unknown): err is { type: string } {
   );
 }
 
-// O express.json() lança erros próprios (JSON quebrado, corpo grande demais).
-// Aqui eles viram AppError, para saírem no mesmo formato dos demais.
 function fromBodyParserError(err: unknown): AppError | undefined {
   if (!hasStringType(err)) {
     return undefined;

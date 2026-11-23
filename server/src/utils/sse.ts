@@ -5,7 +5,6 @@ export function openEventStream(res: Response): void {
   res.setHeader('Content-Type', 'text/event-stream; charset=utf-8');
   res.setHeader('Cache-Control', 'no-cache, no-transform');
   res.setHeader('Connection', 'keep-alive');
-  // Evita que proxies como o nginx guardem a resposta antes de enviá-la.
   res.setHeader('X-Accel-Buffering', 'no');
   res.flushHeaders();
 }

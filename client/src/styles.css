@@ -4,7 +4,6 @@
 :root {
   color-scheme: light dark;
 
-  /* Papel e tinta: a página é uma mesa, o currículo é a folha. */
   --desk: #e9eef5;
   --sheet: #fdfeff;
   --ink: #14213d;

@@ -1,7 +1,6 @@
 import { Subject } from 'rxjs';
 import type { ReviewStreamEvent } from '../review.model';
 
-// ReviewApi falso: em vez de chamar a rede, o teste decide o que "chega".
 export class FakeReviewApi {
   readonly streams: Subject<ReviewStreamEvent>[] = [];
 

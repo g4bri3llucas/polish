@@ -107,7 +107,6 @@ function toApiError(error: unknown): ReviewApiError {
 export class ReviewApi {
   private readonly baseUrl = inject(API_BASE_URL);
 
-  // Cancelar a inscrição (unsubscribe) cancela a requisição.
   streamReview(request: ReviewRequest): Observable<ReviewStreamEvent> {
     return new Observable<ReviewStreamEvent>((subscriber) => {
       const controller = new AbortController();

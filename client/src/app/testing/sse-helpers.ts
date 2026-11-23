@@ -4,7 +4,6 @@ import { ReviewApiError } from '../review-api';
 
 const encoder = new TextEncoder();
 
-// Cria uma resposta HTTP cujo corpo chega em pedaços, como no streaming real.
 export function streamResponse(chunks: string[], init: ResponseInit = { status: 200 }): Response {
   const body = new ReadableStream<Uint8Array>({
     start(controller) {

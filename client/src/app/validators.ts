@@ -14,7 +14,6 @@ export function minTrimmedLength(min: number): ValidatorFn {
   return (control: AbstractControl): ValidationErrors | null => {
     const length = trimmedLength(control);
 
-    // Texto vazio já é tratado por requiredTrimmed.
     if (length === 0 || length >= min) {
       return null;
     }

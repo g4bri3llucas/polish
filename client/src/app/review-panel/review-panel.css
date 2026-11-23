@@ -7,7 +7,6 @@
   padding: 0.5rem 0;
 }
 
-/* A nota é a única marca de caneta vermelha da tela. */
 .grade {
   position: relative;
   display: grid;
@@ -95,7 +94,6 @@ dd {
   stroke-dashoffset: 0;
 }
 
-/* Ao começar a revisão, o círculo é "desenhado" como se fosse à caneta. */
 .grade.drawing path {
   animation: draw 0.9s ease-out;
 }

@@ -54,7 +54,6 @@ describe('ReviewApi', () => {
   it('reassembles messages and multi-byte characters split across network chunks', async () => {
     const full = sseChunk('Avaliação ✓') + SSE_DONE;
     const bytes = new TextEncoder().encode(full);
-    // Corta no meio de um caractere de vários bytos ("ç" ou "✓").
     const cut = bytes.indexOf(0xe2) + 1;
     const body = new ReadableStream<Uint8Array>({
       start(controller) {
