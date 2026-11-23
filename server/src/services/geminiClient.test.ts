@@ -27,6 +27,24 @@ vi.mock('@google/genai', async (importOriginal) => {
 const params = { systemInstruction: 'regras', prompt: 'texto' };
 const noRetry = { retryDelaysMs: [] };
 const fastRetry = { retryDelaysMs: [0, 0] };
+const quickStall = { retryDelaysMs: [0, 0], firstChunkTimeoutMs: 20 };
+
+interface StreamRequest {
+  config: { abortSignal: AbortSignal };
+}
+
+async function* hangsUntilAborted(signal: AbortSignal): AsyncGenerator<{ text: string }> {
+  await new Promise((_resolve, reject) => {
+    signal.addEventListener('abort', () => {
+      reject(signal.reason);
+    });
+  });
+  yield { text: 'nunca chega' };
+}
+
+function stalledStream({ config }: StreamRequest) {
+  return Promise.resolve(hangsUntilAborted(config.abortSignal));
+}
 const overloaded = () => new ApiError({ message: 'high demand', status: 503 });
 
 async function* streamOf(...texts: (string | undefined)[]): AsyncGenerator<{ text: string | undefined }> {
@@ -235,6 +253,58 @@ describe('GeminiClient.generateStream', () => {
 
     expect(received).toEqual(['a']);
     expect(error.code).toBe('LLM_OVERLOADED');
+    expect(mocks.generateContentStream).toHaveBeenCalledTimes(1);
+  });
+
+  it('tries again when the first chunk takes too long', async () => {
+    mocks.generateContentStream
+      .mockImplementationOnce(stalledStream)
+      .mockResolvedValueOnce(streamOf('a', 'b'));
+    const client = new GeminiClient('chave', 'modelo', quickStall);
+
+    await expect(collect(client.generateStream(params))).resolves.toEqual(['a', 'b']);
+    expect(mocks.generateContentStream).toHaveBeenCalledTimes(2);
+  });
+
+  it('reports LLM_TIMEOUT when every attempt stalls', async () => {
+    mocks.generateContentStream.mockImplementation(stalledStream);
+    const client = new GeminiClient('chave', 'modelo', quickStall);
+
+    const error = await errorFrom(collect(client.generateStream(params)));
+
+    expect(error.statusCode).toBe(504);
+    expect(error.code).toBe('LLM_TIMEOUT');
+    expect(mocks.generateContentStream).toHaveBeenCalledTimes(3);
+  });
+
+  it('lets a slow answer finish once the first chunk arrived', async () => {
+    async function* slowAfterFirst(): AsyncGenerator<{ text: string }> {
+      await Promise.resolve();
+      yield { text: 'a' };
+      await new Promise((resolve) => setTimeout(resolve, 60));
+      yield { text: 'b' };
+    }
+
+    mocks.generateContentStream.mockResolvedValue(slowAfterFirst());
+    const client = new GeminiClient('chave', 'modelo', quickStall);
+
+    await expect(collect(client.generateStream(params))).resolves.toEqual(['a', 'b']);
+    expect(mocks.generateContentStream).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not retry when the caller cancels the request', async () => {
+    mocks.generateContentStream.mockImplementation(stalledStream);
+    const client = new GeminiClient('chave', 'modelo', quickStall);
+    const cancel = new AbortController();
+    setTimeout(() => {
+      cancel.abort();
+    }, 5);
+
+    const error = await errorFrom(
+      collect(client.generateStream({ ...params, signal: cancel.signal })),
+    );
+
+    expect(error.code).toBe('LLM_TIMEOUT');
     expect(mocks.generateContentStream).toHaveBeenCalledTimes(1);
   });
 });

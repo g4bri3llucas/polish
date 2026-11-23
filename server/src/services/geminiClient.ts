@@ -10,6 +10,15 @@ import type { LlmClient, LlmGenerateParams } from './llmClient';
 const REQUEST_TIMEOUT_MS = 60_000;
 const TEMPERATURE = 0.4;
 const DEFAULT_RETRY_DELAYS_MS = [1_000, 3_000];
+const DEFAULT_FIRST_CHUNK_TIMEOUT_MS = 15_000;
+
+function timeoutError(): AppError {
+  return new AppError(
+    504,
+    'LLM_TIMEOUT',
+    'O serviço de IA demorou demais para responder.',
+  );
+}
 
 function toAppError(error: unknown): AppError {
   if (error instanceof AppError) {
@@ -46,11 +55,7 @@ function toAppError(error: unknown): AppError {
     error instanceof Error &&
     (error.name === 'TimeoutError' || error.name === 'AbortError')
   ) {
-    return new AppError(
-      504,
-      'LLM_TIMEOUT',
-      'O serviço de IA demorou demais para responder.',
-    );
+    return timeoutError();
   }
 
   console.error('Erro inesperado ao chamar o Gemini:', error);
@@ -76,24 +81,35 @@ function emptyResponseError(): AppError {
 
 export interface GeminiClientOptions {
   retryDelaysMs?: readonly number[];
+  firstChunkTimeoutMs?: number;
 }
 
 export class GeminiClient implements LlmClient {
   private readonly ai: GoogleGenAI;
   private readonly model: string;
   private readonly retryDelaysMs: readonly number[];
+  private readonly firstChunkTimeoutMs: number;
 
   constructor(apiKey: string, model: string, options: GeminiClientOptions = {}) {
     this.ai = new GoogleGenAI({ apiKey });
     this.model = model;
     this.retryDelaysMs = options.retryDelaysMs ?? DEFAULT_RETRY_DELAYS_MS;
+    this.firstChunkTimeoutMs =
+      options.firstChunkTimeoutMs ?? DEFAULT_FIRST_CHUNK_TIMEOUT_MS;
   }
 
-  private buildConfig(params: LlmGenerateParams): GenerateContentConfig {
+  private buildConfig(
+    params: LlmGenerateParams,
+    stallSignal?: AbortSignal,
+  ): GenerateContentConfig {
     const signals = [AbortSignal.timeout(REQUEST_TIMEOUT_MS)];
 
     if (params.signal !== undefined) {
       signals.push(params.signal);
+    }
+
+    if (stallSignal !== undefined) {
+      signals.push(stallSignal);
     }
 
     return {
@@ -105,6 +121,10 @@ export class GeminiClient implements LlmClient {
 
   private canRetry(error: unknown, attempt: number): boolean {
     return attempt < this.retryDelaysMs.length && isRetryable(error);
+  }
+
+  private hasRetriesLeft(attempt: number): boolean {
+    return attempt < this.retryDelaysMs.length;
   }
 
   private async waitBeforeRetry(attempt: number, signal?: AbortSignal): Promise<void> {
@@ -144,12 +164,16 @@ export class GeminiClient implements LlmClient {
   async *generateStream(params: LlmGenerateParams): AsyncGenerator<string> {
     for (let attempt = 0; ; attempt++) {
       let hasContent = false;
+      const stall = new AbortController();
+      const stallTimer = setTimeout(() => {
+        stall.abort();
+      }, this.firstChunkTimeoutMs);
 
       try {
         const stream = await this.ai.models.generateContentStream({
           model: this.model,
           contents: params.prompt,
-          config: this.buildConfig(params),
+          config: this.buildConfig(params, stall.signal),
         });
 
         for await (const chunk of stream) {
@@ -157,6 +181,7 @@ export class GeminiClient implements LlmClient {
 
           if (text !== undefined && text !== '') {
             hasContent = true;
+            clearTimeout(stallTimer);
             yield text;
           }
         }
@@ -167,9 +192,19 @@ export class GeminiClient implements LlmClient {
 
         return;
       } catch (error) {
-        if (hasContent || !this.canRetry(error, attempt)) {
+        if (hasContent) {
           throw toAppError(error);
         }
+
+        if (stall.signal.aborted) {
+          if (!this.hasRetriesLeft(attempt)) {
+            throw timeoutError();
+          }
+        } else if (!this.canRetry(error, attempt)) {
+          throw toAppError(error);
+        }
+      } finally {
+        clearTimeout(stallTimer);
       }
 
       await this.waitBeforeRetry(attempt, params.signal);
