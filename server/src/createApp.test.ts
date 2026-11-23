@@ -196,6 +196,55 @@ describe('POST /api/review/stream', () => {
     ]);
   });
 
+  it('restarts the review when the model gets overloaded midway', async () => {
+    let call = 0;
+    const llm = createFakeLlm({
+      generateStream: async function* () {
+        call++;
+        await Promise.resolve();
+
+        if (call === 1) {
+          yield 'parcial';
+          throw new AppError(503, 'LLM_OVERLOADED', 'Sobrecarregado.');
+        }
+
+        yield 'completo';
+      },
+    });
+    const { baseUrl } = await start(llm);
+
+    const response = await postJson(baseUrl, '/api/review/stream', { resumeText: VALID_RESUME });
+
+    expect(await readSseEvents(response)).toEqual([
+      { event: 'chunk', data: { text: 'parcial' } },
+      { event: 'restart', data: {} },
+      { event: 'chunk', data: { text: 'completo' } },
+      { event: 'done', data: {} },
+    ]);
+    expect(llm.streamCalls).toHaveLength(2);
+  });
+
+  it('gives up after the last restart', async () => {
+    const llm = createFakeLlm({
+      generateStream: async function* () {
+        await Promise.resolve();
+        yield 'parcial';
+        throw new AppError(503, 'LLM_OVERLOADED', 'Sobrecarregado.');
+      },
+    });
+    const { baseUrl } = await start(llm);
+
+    const response = await postJson(baseUrl, '/api/review/stream', { resumeText: VALID_RESUME });
+    const events = await readSseEvents(response);
+
+    expect(events.filter((e) => e.event === 'restart')).toHaveLength(2);
+    expect(events.at(-1)).toEqual({
+      event: 'error',
+      data: { error: { code: 'LLM_OVERLOADED', message: 'Sobrecarregado.' } },
+    });
+    expect(llm.streamCalls).toHaveLength(3);
+  });
+
   it('hides unexpected error details inside the stream too', async () => {
     const llm = createFakeLlm({
       generateStream: async function* () {
