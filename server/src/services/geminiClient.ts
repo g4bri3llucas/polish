@@ -3,11 +3,13 @@ import {
   GoogleGenAI,
   type GenerateContentConfig,
 } from '@google/genai';
+import { setTimeout as sleep } from 'node:timers/promises';
 import { AppError } from '../errors/AppError';
 import type { LlmClient, LlmGenerateParams } from './llmClient';
 
 const REQUEST_TIMEOUT_MS = 60_000;
 const TEMPERATURE = 0.4;
+const DEFAULT_RETRY_DELAYS_MS = [1_000, 3_000];
 
 function toAppError(error: unknown): AppError {
   if (error instanceof AppError) {
@@ -52,6 +54,11 @@ function toAppError(error: unknown): AppError {
   );
 }
 
+
+function isRetryable(error: unknown): boolean {
+  return error instanceof ApiError && error.status === 503;
+}
+
 function emptyResponseError(): AppError {
   return new AppError(
     502,
@@ -60,18 +67,23 @@ function emptyResponseError(): AppError {
   );
 }
 
+export interface GeminiClientOptions {
+  retryDelaysMs?: readonly number[];
+}
+
 export class GeminiClient implements LlmClient {
   private readonly ai: GoogleGenAI;
   private readonly model: string;
+  private readonly retryDelaysMs: readonly number[];
 
-  constructor(apiKey: string, model: string) {
+  constructor(apiKey: string, model: string, options: GeminiClientOptions = {}) {
     this.ai = new GoogleGenAI({ apiKey });
     this.model = model;
+    this.retryDelaysMs = options.retryDelaysMs ?? DEFAULT_RETRY_DELAYS_MS;
   }
 
   private buildConfig(params: LlmGenerateParams): GenerateContentConfig {
-    // A chamada é cancelada por tempo esgotado OU quando quem chamou desiste
-    // (por exemplo, o navegador fechou a conexão).
+    
     const signals = [AbortSignal.timeout(REQUEST_TIMEOUT_MS)];
 
     if (params.signal !== undefined) {
@@ -85,50 +97,77 @@ export class GeminiClient implements LlmClient {
     };
   }
 
-  async generate(params: LlmGenerateParams): Promise<string> {
+  private canRetry(error: unknown, attempt: number): boolean {
+    return attempt < this.retryDelaysMs.length && isRetryable(error);
+  }
+
+  private async waitBeforeRetry(attempt: number, signal?: AbortSignal): Promise<void> {
     try {
-      const response = await this.ai.models.generateContent({
-        model: this.model,
-        contents: params.prompt,
-        config: this.buildConfig(params),
-      });
-
-      const text = response.text?.trim();
-
-      if (text === undefined || text === '') {
-        throw emptyResponseError();
-      }
-
-      return text;
+      await sleep(this.retryDelaysMs[attempt], undefined, { signal });
     } catch (error) {
       throw toAppError(error);
     }
   }
 
-  async *generateStream(params: LlmGenerateParams): AsyncGenerator<string> {
-    try {
-      const stream = await this.ai.models.generateContentStream({
-        model: this.model,
-        contents: params.prompt,
-        config: this.buildConfig(params),
-      });
+  async generate(params: LlmGenerateParams): Promise<string> {
+    for (let attempt = 0; ; attempt++) {
+      try {
+        const response = await this.ai.models.generateContent({
+          model: this.model,
+          contents: params.prompt,
+          config: this.buildConfig(params),
+        });
 
-      let hasContent = false;
+        const text = response.text?.trim();
 
-      for await (const chunk of stream) {
-        const text = chunk.text;
+        if (text === undefined || text === '') {
+          throw emptyResponseError();
+        }
 
-        if (text !== undefined && text !== '') {
-          hasContent = true;
-          yield text;
+        return text;
+      } catch (error) {
+        if (!this.canRetry(error, attempt)) {
+          throw toAppError(error);
         }
       }
 
-      if (!hasContent) {
-        throw emptyResponseError();
+      await this.waitBeforeRetry(attempt, params.signal);
+    }
+  }
+
+  async *generateStream(params: LlmGenerateParams): AsyncGenerator<string> {
+    for (let attempt = 0; ; attempt++) {
+      let hasContent = false;
+
+      try {
+        const stream = await this.ai.models.generateContentStream({
+          model: this.model,
+          contents: params.prompt,
+          config: this.buildConfig(params),
+        });
+
+        for await (const chunk of stream) {
+          const text = chunk.text;
+
+          if (text !== undefined && text !== '') {
+            hasContent = true;
+            yield text;
+          }
+        }
+
+        if (!hasContent) {
+          throw emptyResponseError();
+        }
+
+        return;
+      } catch (error) {
+        
+        if (hasContent || !this.canRetry(error, attempt)) {
+          throw toAppError(error);
+        }
       }
-    } catch (error) {
-      throw toAppError(error);
+
+      await this.waitBeforeRetry(attempt, params.signal);
     }
   }
 }

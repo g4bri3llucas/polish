@@ -25,6 +25,9 @@ vi.mock('@google/genai', async (importOriginal) => {
 });
 
 const params = { systemInstruction: 'regras', prompt: 'texto' };
+const noRetry = { retryDelaysMs: [] };
+const fastRetry = { retryDelaysMs: [0, 0] };
+const overloaded = () => new ApiError({ message: 'high demand', status: 503 });
 
 async function* streamOf(...texts: (string | undefined)[]): AsyncGenerator<{ text: string | undefined }> {
   await Promise.resolve();
@@ -65,7 +68,7 @@ beforeEach(() => {
 describe('GeminiClient.generate', () => {
   it('returns the trimmed text and sends model, prompt and system instruction', async () => {
     mocks.generateContent.mockResolvedValue({ text: '  resposta  ' });
-    const client = new GeminiClient('chave', 'modelo-x');
+    const client = new GeminiClient('chave', 'modelo-x', noRetry);
 
     await expect(client.generate(params)).resolves.toBe('resposta');
 
@@ -80,7 +83,7 @@ describe('GeminiClient.generate', () => {
 
   it('maps an empty response to LLM_EMPTY_RESPONSE', async () => {
     mocks.generateContent.mockResolvedValue({ text: '   ' });
-    const client = new GeminiClient('chave', 'modelo');
+    const client = new GeminiClient('chave', 'modelo', noRetry);
 
     const error = await errorFrom(client.generate(params));
 
@@ -90,7 +93,7 @@ describe('GeminiClient.generate', () => {
 
   it('maps a Gemini 429 to LLM_RATE_LIMITED', async () => {
     mocks.generateContent.mockRejectedValue(new ApiError({ message: 'quota', status: 429 }));
-    const client = new GeminiClient('chave', 'modelo');
+    const client = new GeminiClient('chave', 'modelo', noRetry);
 
     const error = await errorFrom(client.generate(params));
 
@@ -100,7 +103,7 @@ describe('GeminiClient.generate', () => {
 
   it('maps other Gemini errors (like 503) to LLM_UNAVAILABLE', async () => {
     mocks.generateContent.mockRejectedValue(new ApiError({ message: 'high demand', status: 503 }));
-    const client = new GeminiClient('chave', 'modelo');
+    const client = new GeminiClient('chave', 'modelo', noRetry);
 
     const error = await errorFrom(client.generate(params));
 
@@ -108,11 +111,40 @@ describe('GeminiClient.generate', () => {
     expect(error.code).toBe('LLM_UNAVAILABLE');
   });
 
+  it('retries when Gemini is overloaded and returns the next answer', async () => {
+    mocks.generateContent
+      .mockRejectedValueOnce(overloaded())
+      .mockResolvedValueOnce({ text: 'resposta' });
+    const client = new GeminiClient('chave', 'modelo', fastRetry);
+
+    await expect(client.generate(params)).resolves.toBe('resposta');
+    expect(mocks.generateContent).toHaveBeenCalledTimes(2);
+  });
+
+  it('gives up after the last retry', async () => {
+    mocks.generateContent.mockRejectedValue(overloaded());
+    const client = new GeminiClient('chave', 'modelo', fastRetry);
+
+    const error = await errorFrom(client.generate(params));
+
+    expect(error.code).toBe('LLM_UNAVAILABLE');
+    expect(mocks.generateContent).toHaveBeenCalledTimes(3);
+  });
+
+  it('does not retry a 429', async () => {
+    mocks.generateContent.mockRejectedValue(new ApiError({ message: 'quota', status: 429 }));
+    const client = new GeminiClient('chave', 'modelo', fastRetry);
+
+    await errorFrom(client.generate(params));
+
+    expect(mocks.generateContent).toHaveBeenCalledTimes(1);
+  });
+
   it('maps timeouts and aborts to LLM_TIMEOUT', async () => {
     const timeout = new Error('timeout');
     timeout.name = 'TimeoutError';
     mocks.generateContent.mockRejectedValue(timeout);
-    const client = new GeminiClient('chave', 'modelo');
+    const client = new GeminiClient('chave', 'modelo', noRetry);
 
     const error = await errorFrom(client.generate(params));
 
@@ -122,7 +154,7 @@ describe('GeminiClient.generate', () => {
 
   it('maps unknown errors to LLM_UNAVAILABLE without leaking their message', async () => {
     mocks.generateContent.mockRejectedValue(new Error('segredo interno'));
-    const client = new GeminiClient('chave', 'modelo');
+    const client = new GeminiClient('chave', 'modelo', noRetry);
 
     const error = await errorFrom(client.generate(params));
 
@@ -134,14 +166,14 @@ describe('GeminiClient.generate', () => {
 describe('GeminiClient.generateStream', () => {
   it('yields only non-empty chunks', async () => {
     mocks.generateContentStream.mockResolvedValue(streamOf('a', undefined, '', 'b'));
-    const client = new GeminiClient('chave', 'modelo');
+    const client = new GeminiClient('chave', 'modelo', noRetry);
 
     await expect(collect(client.generateStream(params))).resolves.toEqual(['a', 'b']);
   });
 
   it('fails with LLM_EMPTY_RESPONSE when the stream has no text', async () => {
     mocks.generateContentStream.mockResolvedValue(streamOf(undefined, ''));
-    const client = new GeminiClient('chave', 'modelo');
+    const client = new GeminiClient('chave', 'modelo', noRetry);
 
     const error = await errorFrom(collect(client.generateStream(params)));
 
@@ -150,10 +182,49 @@ describe('GeminiClient.generateStream', () => {
 
   it('maps a failure to start the stream', async () => {
     mocks.generateContentStream.mockRejectedValue(new ApiError({ message: 'quota', status: 429 }));
-    const client = new GeminiClient('chave', 'modelo');
+    const client = new GeminiClient('chave', 'modelo', noRetry);
 
     const error = await errorFrom(collect(client.generateStream(params)));
 
     expect(error.code).toBe('LLM_RATE_LIMITED');
+  });
+
+  it('retries when the stream fails before the first chunk', async () => {
+    async function* failsFirst(): AsyncGenerator<{ text: string }> {
+      await Promise.resolve();
+      throw overloaded();
+    }
+
+    mocks.generateContentStream
+      .mockResolvedValueOnce(failsFirst())
+      .mockResolvedValueOnce(streamOf('a', 'b'));
+    const client = new GeminiClient('chave', 'modelo', fastRetry);
+
+    await expect(collect(client.generateStream(params))).resolves.toEqual(['a', 'b']);
+    expect(mocks.generateContentStream).toHaveBeenCalledTimes(2);
+  });
+
+  it('does not retry once a chunk was already sent', async () => {
+    async function* failsMidway(): AsyncGenerator<{ text: string }> {
+      await Promise.resolve();
+      yield { text: 'a' };
+      throw overloaded();
+    }
+
+    mocks.generateContentStream.mockResolvedValue(failsMidway());
+    const client = new GeminiClient('chave', 'modelo', fastRetry);
+    const received: string[] = [];
+
+    const error = await errorFrom(
+      (async () => {
+        for await (const text of client.generateStream(params)) {
+          received.push(text);
+        }
+      })(),
+    );
+
+    expect(received).toEqual(['a']);
+    expect(error.code).toBe('LLM_UNAVAILABLE');
+    expect(mocks.generateContentStream).toHaveBeenCalledTimes(1);
   });
 });
