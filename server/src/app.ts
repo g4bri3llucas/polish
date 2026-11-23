@@ -16,6 +16,7 @@ export function createApp({ llmClient }: AppDependencies): Express {
   const app = express();
 
   app.disable('x-powered-by');
+  app.set('trust proxy', env.trustProxy);
   app.use(cors({ origin: env.clientOrigin }));
 
   // O limite de requisições vem antes do parser de JSON, para barrar o abuso
