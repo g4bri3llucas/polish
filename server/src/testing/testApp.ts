@@ -1,6 +1,6 @@
 import { once } from 'node:events';
 import type { AddressInfo } from 'node:net';
-import { createApp } from '../app';
+import { createApp } from '../createApp';
 import type { LlmClient, LlmGenerateParams } from '../services/llmClient';
 
 export const VALID_RESUME =

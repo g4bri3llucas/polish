@@ -1,4 +1,4 @@
-import { createApp } from './app';
+import { createApp } from './createApp';
 import { env } from './config/env';
 import { GeminiClient } from './services/geminiClient';
 
