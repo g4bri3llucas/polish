@@ -101,8 +101,18 @@ describe('GeminiClient.generate', () => {
     expect(error.code).toBe('LLM_RATE_LIMITED');
   });
 
-  it('maps other Gemini errors (like 503) to LLM_UNAVAILABLE', async () => {
-    mocks.generateContent.mockRejectedValue(new ApiError({ message: 'high demand', status: 503 }));
+  it('maps a Gemini 503 to LLM_OVERLOADED', async () => {
+    mocks.generateContent.mockRejectedValue(overloaded());
+    const client = new GeminiClient('chave', 'modelo', noRetry);
+
+    const error = await errorFrom(client.generate(params));
+
+    expect(error.statusCode).toBe(503);
+    expect(error.code).toBe('LLM_OVERLOADED');
+  });
+
+  it('maps other Gemini errors to LLM_UNAVAILABLE', async () => {
+    mocks.generateContent.mockRejectedValue(new ApiError({ message: 'internal', status: 500 }));
     const client = new GeminiClient('chave', 'modelo', noRetry);
 
     const error = await errorFrom(client.generate(params));
@@ -127,7 +137,7 @@ describe('GeminiClient.generate', () => {
 
     const error = await errorFrom(client.generate(params));
 
-    expect(error.code).toBe('LLM_UNAVAILABLE');
+    expect(error.code).toBe('LLM_OVERLOADED');
     expect(mocks.generateContent).toHaveBeenCalledTimes(3);
   });
 
@@ -224,7 +234,7 @@ describe('GeminiClient.generateStream', () => {
     );
 
     expect(received).toEqual(['a']);
-    expect(error.code).toBe('LLM_UNAVAILABLE');
+    expect(error.code).toBe('LLM_OVERLOADED');
     expect(mocks.generateContentStream).toHaveBeenCalledTimes(1);
   });
 });

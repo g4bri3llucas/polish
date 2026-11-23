@@ -27,6 +27,14 @@ function toAppError(error: unknown): AppError {
       );
     }
 
+    if (error.status === 503) {
+      return new AppError(
+        503,
+        'LLM_OVERLOADED',
+        'O serviço de IA está sobrecarregado agora. Tente novamente em instantes.',
+      );
+    }
+
     return new AppError(
       502,
       'LLM_UNAVAILABLE',
@@ -53,7 +61,6 @@ function toAppError(error: unknown): AppError {
     'O serviço de IA não está disponível no momento.',
   );
 }
-
 
 function isRetryable(error: unknown): boolean {
   return error instanceof ApiError && error.status === 503;
@@ -83,7 +90,6 @@ export class GeminiClient implements LlmClient {
   }
 
   private buildConfig(params: LlmGenerateParams): GenerateContentConfig {
-    
     const signals = [AbortSignal.timeout(REQUEST_TIMEOUT_MS)];
 
     if (params.signal !== undefined) {
@@ -161,7 +167,6 @@ export class GeminiClient implements LlmClient {
 
         return;
       } catch (error) {
-        
         if (hasContent || !this.canRetry(error, attempt)) {
           throw toAppError(error);
         }
